@@ -11,4 +11,3 @@ class Config(object):
     MIN_CUSTOM_ID_LENGTH = 1
     MAX_CUSTOM_ID_LENGTH = 16
     CUSTOM_ID_PATTERN = r'^[a-zA-Z0-9]+$'
-    

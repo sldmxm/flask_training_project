@@ -25,12 +25,10 @@ def post_new_url():
     if 'url' not in data or not data['url']:
         raise APIError('"url" является обязательным полем!')
     custom_id = data.get('custom_id', '')
-    if (
-            custom_id and (
-            len(custom_id) > Config.MAX_CUSTOM_ID_LENGTH or
-            len(custom_id) < Config.MIN_CUSTOM_ID_LENGTH or
-            not re.match(Config.CUSTOM_ID_PATTERN, custom_id)
-    )):
+    if (custom_id and
+            (len(custom_id) > Config.MAX_CUSTOM_ID_LENGTH or
+             len(custom_id) < Config.MIN_CUSTOM_ID_LENGTH or
+             not re.match(Config.CUSTOM_ID_PATTERN, custom_id))):
         raise APIError('Указано недопустимое имя для короткой ссылки')
     try:
         short_url = get_unique_short_id(
