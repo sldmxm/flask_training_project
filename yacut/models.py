@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 import random
+from urllib.parse import urlparse
 
 from flask import url_for
 
@@ -26,20 +27,17 @@ class URLMap(db.Model):
     def get_by_short_id(short_id):
         return URLMap.query.filter_by(short=short_id).first()
 
-    @staticmethod
-    def save_to_db(original, short):
+    def save_to_db(self):
         if (
-                len(short) > Config.MAX_CUSTOM_ID_LENGTH or
-                len(short) < Config.MIN_CUSTOM_ID_LENGTH or
-                not re.match(Config.CUSTOM_ID_PATTERN, short)
+                len(self.short) > Config.MAX_CUSTOM_ID_LENGTH or
+                len(self.short) < Config.MIN_CUSTOM_ID_LENGTH or
+                not re.match(Config.CUSTOM_ID_PATTERN, self.short)
         ):
             raise APIError('Указано недопустимое имя для короткой ссылки')
 
-        db.session.add(URLMap(
-            original=original,
-            short=short,
-        ))
+        db.session.add(self)
         db.session.commit()
+        return self
 
     @staticmethod
     def get_unique_short_id(original_link, short_id=None):
@@ -53,19 +51,12 @@ class URLMap(db.Model):
         :raise: APIError если short_id не прошел валидацию
         :return: абсолютный адрес короткой ссылки
         """
-        if original_link.split('://')[0] not in ['http', 'https']:
-            original_link = f'https://{original_link}'
+        if not urlparse(original_link).scheme:
+            original_link = (
+                urlparse(original_link)._replace(scheme='https').geturl()
+            )
 
         if short_id and URLMap.get_by_short_id(short_id):
-            # если короткий id уже есть в БД для того же адреса,
-            # было бы логично выдавать его, но нет, тесты против
-            # if original_link == get_by_short_id(short_id).original:
-            #     return url_for(
-            #         "url_redirect",
-            #         short_id=short_id,
-            #         _external=True
-            #     )
-            # else:
             raise NotUniqShortLink
 
         # если уже есть оригинальный урл и нет пожеланий пользователя,
@@ -82,15 +73,22 @@ class URLMap(db.Model):
             )
 
         else:
-            while not short_id or URLMap.get_by_short_id(short_id):
-                short_id = ''.join(
-                    random.choices(
+            # Справедливости ради, вероятность генерации занятого адреса
+            # равна количеству занятых (а не 1) / количество возможных перестановок,
+            # то есть, растет вместе с БД.
+            short_id = (
+                    short_id or
+                    ''.join(random.choices(
                         Config.SHORT_ID_GENERATE_PATTERN,
                         k=Config.SHORT_ID_GENERATE_LENGTH
                     )
-                )
-            URLMap.save_to_db(
-                original_link,
-                short_id,
+                    )
             )
-        return url_for("url_redirect", short_id=short_id, _external=True)
+        return url_for(
+            "url_redirect",
+            short_id=URLMap(
+                original=original_link,
+                short=short_id,
+            ).save_to_db().short,
+            _external=True
+        )
