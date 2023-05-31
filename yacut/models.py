@@ -76,14 +76,11 @@ class URLMap(db.Model):
             # Справедливости ради, вероятность генерации занятого адреса
             # равна количеству занятых (а не 1) / количество возможных перестановок,
             # то есть, растет вместе с БД.
-            short_id = (
-                    short_id or
-                    ''.join(random.choices(
-                        Config.SHORT_ID_GENERATE_PATTERN,
-                        k=Config.SHORT_ID_GENERATE_LENGTH
-                    )
-                    )
-            )
+            short_id = (short_id or
+                        ''.join(random.choices(
+                            Config.SHORT_ID_GENERATE_PATTERN,
+                            k=Config.SHORT_ID_GENERATE_LENGTH
+                        )))
         return url_for(
             "url_redirect",
             short_id=URLMap(
